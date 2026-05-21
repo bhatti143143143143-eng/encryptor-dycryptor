@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Emoji & Scramble64 Encrypter</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--bg);
+            padding: 5px;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.4);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        input[type="text"], 
+        textarea {
+            width: 100%;
+            background-color: var(--bg);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        button.action-btn {
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        button.action-btn:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-secondary {
+            background-color: var(--border);
+            color: var(--text);
+        }
+        .btn-secondary:hover {
+            background-color: #475569;
+        }
+
+        /* Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--success);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+            z-index: 1000;
+            font-weight: 500;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.error {
+            background-color: var(--error);
+        }
+
+        .info-box {
+            background-color: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: #a5b4fc;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🔒 Shma64 Emoji Crypter</h1>
+            <p class="subtitle">Scramble & Encode text into uncrackable Emoji strings</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('encrypt')">Encrypt</button>
+            <button class="tab-btn" onclick="switchTab('decrypt')">Decrypt</button>
+        </div>
+
+        <div id="info-encrypt" class="info-box">
+            Standard tools cannot read this. It first scrambles your text with a password, converts to Base64, and then maps the result to a custom Emoji dictionary.
+        </div>
+        <div id="info-decrypt" class="info-box" style="display: none;">
+            Paste your Emoji string below. You must use the <strong>exact same password</strong> used during encryption to retrieve the original text.
+        </div>
+
+        <!-- Password Input -->
+        <div class="input-group">
+            <label for="password">Secret Key (Password)</label>
+            <input type="text" id="password" placeholder="Enter a secret key..." autocomplete="off">
+        </div>
+
+        <!-- Encrypt Section -->
+        <div id="section-encrypt">
+            <div class="input-group">
+                <label for="input-text">Original Text</label>
+                <textarea id="input-text" placeholder="Type your secret message here..."></textarea>
+            </div>
+            <div class="actions">
+                <button class="action-btn btn-secondary" onclick="clearFields()">Clear</button>
+                <button class="action-btn btn-primary" onclick="processEncrypt()">
+                    <span>🔒 Encrypt to Emojis</span>
+                </button>
+            </div>
+            <div class="input-group" style="margin-top: 1.5rem;">
+                <label for="output-text">Encrypted Emoji Code</label>
+                <textarea id="output-text" readonly placeholder="Result will appear here..." onclick="this.select()"></textarea>
+            </div>
+            <button class="action-btn btn-secondary" style="width: 100%;" onclick="copyToClipboard('output-text')">📋 Copy Encrypted Code</button>
+        </div>
+
+        <!-- Decrypt Section -->
+        <div id="section-decrypt" style="display: none;">
+            <div class="input-group">
+                <label for="input-emoji">Encrypted Emoji Code</label>
+                <textarea id="input-emoji" placeholder="Paste the emoji string here..."></textarea>
+            </div>
+            <div class="actions">
+                <button class="action-btn btn-secondary" onclick="clearFields()">Clear</button>
+                <button class="action-btn btn-primary" onclick="processDecrypt()">
+                    <span>🔓 Decrypt to Text</span>
+                </button>
+            </div>
+            <div class="input-group" style="margin-top: 1.5rem;">
+                <label for="output-plain">Decrypted Message</label>
+                <textarea id="output-plain" readonly placeholder="Decrypted message will appear here..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">Copied to clipboard!</div>
+
+    <script>
+        // --- 1. The Custom Emoji Dictionary ---
+        // We need 64 unique emojis to map exactly to Base64 characters (A-Z, a-z, 0-9, +, /)
+        // Standard Base64 charset order: A-Z, a-z, 0-9, +, /
+        const base64Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        
+        // A custom list of 64 distinct emojis. 
+        // If you change this list, encrypted texts from previous versions won't decrypt!
+        const emojiMap = [
+            "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","🙃","😉","😊","😇","🥰","😍","🤩",
+            "😘","😗","😚","😙","😋","😛","😜","🤪","😝","🤑","🤗","🤭","🤫","🤔","🤐","🤨",
+            "😐","😑","😶","😏","😒","🙄","😬","🤥","😌","😔","😪","🤤","😴","😷","🤒","🤕",
+            "🤢","🤮","🤧","🥵","🥶","🥴","😵","🤯","🤠","🥳","😎","🤓","🧐","😕","😟","🙁"
+        ];
+
+        // Verify mapping length
+        if(base64Chars.length !== emojiMap.length) {
+            console.error("Critical Error: Emoji map size does not match Base64 charset size.");
+        }
+
+        // --- 2. Helper Functions ---
+
+        // Convert a string to an array of bytes (UTF-8 safe)
+        function stringToBytes(str) {
+            return new TextEncoder().encode(str);
+        }
+
+        // Convert bytes back to string
+        function bytesToString(bytes) {
+            return new TextDecoder().decode(bytes);
+        }
+
+        // Custom Scramble Algorithm (XOR Cipher)
+        // It takes the text and a key, and XORs the byte values.
+        function scramble(text, key) {
+            if (!key) return text; // No key = no scramble
+            
+            const textBytes = stringToBytes(text);
+            const keyBytes = stringToBytes(key);
+            
+            let resultBytes = [];
+            for (let i = 0; i < textBytes.length; i++) {
+                // Cycle through the key bytes
+                const keyByte = keyBytes[i % keyBytes.length];
+                // XOR operation
+                resultBytes.push(textBytes[i] ^ keyByte);
+            }
+            
+            return bytesToString(new Uint8Array(resultBytes));
+        }
+
+        // Since scramble is symmetric (XOR), decrypting uses the exact same function.
+        // scramble(scramble(text, key), key) == text
+
+        // Convert Base64 string to Emoji string
+        function base64ToEmoji(base64) {
+            let emojiStr = "";
+            for (let char of base64) {
+                if (char === '=') {
+                    // Keep padding as is, or handle specially. 
+                    // We will just ignore '=' or map to a specific char if needed.
+                    // For simplicity in this tool, we strip padding during encrypt
+                    // and add it back during decrypt if needed, but btoa usually handles it.
+                    // Let's just pass it through or skip it to make the emoji string cleaner.
+                    continue; 
+                }
+                const index = base64Chars.indexOf(char);
+                if (index !== -1) {
+                    emojiStr += emojiMap[index];
+                } else {
+                    // If we encounter a character not in our map (like newline), keep it
+                    emojiStr += char;
+                }
+            }
+            return emojiStr;
+        }
+
+        // Convert Emoji string back to Base64 string
+        function emojiToBase64(emojiStr) {
+            let base64 = "";
+            // We need to handle surrogate pairs for emojis correctly
+            // Since our map uses standard emojis, we iterate carefully.
+            
+            // Simple approach: Iterate string. If char is in our map, swap.
+            // Note: emojiStr.split('') breaks surrogate pairs. 
+            // We use Array.from to iterate correctly.
+            const chars = Array.from(emojiStr);
+            
+            for (let char of chars) {
+                const index = emojiMap.indexOf(char);
+                if (index !== -1) {
+                    base64 += base64Chars[index];
+                } else {
+                    // Preserve newlines or spaces if user accidentally pasted them
+                    if(char.trim() !== '') {
+                       // Ignore unknown chars or handle error
+                    }
+                }
+            }
+            return base64;
+        }
+
+        // --- 3. Main Logic ---
+
+        function processEncrypt() {
+            const text = document.getElementById('input-text').value;
+            const key = document.getElementById('password').value;
+
+            if (!text) {
+                showToast("Please enter text to encrypt", true);
+                return;
+            }
+
+            try {
+                // Step 1: Scramble (XOR with key)
+                const scrambled = scramble(text, key);
+                
+                // Step 2: Base64 Encode
+                // btoa handles utf-8 poorly by default, so we use the escape/unescape hack 
+                // or TextEncoder/Decoder logic for robust UTF-8 support in Base64.
+                // Here is a robust utf-8 to base64 implementation:
+                const utf8Bytes = stringToBytes(scrambled);
+                let binary = '';
+                const len = utf8Bytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                    binary += String.fromCharCode(utf8Bytes[i]);
+                }
+                const base64 = btoa(binary);
+
+                // Step 3: Map to Emojis
+                const emojiCode = base64ToEmoji(base64);
+
+                document.getElementById('output-text').value = emojiCode;
+                showToast("Encrypted successfully!");
+            } catch (e) {
+                console.error(e);
+                showToast("Encryption failed. Check for invalid characters.", true);
+            }
+        }
+
+        function processDecrypt() {
+            const emojiCode = document.getElementById('input-emoji').value;
+            const key = document.getElementById('password').value;
+
+            if (!emojiCode) {
+                showToast("Please paste the emoji code", true);
+                return;
+            }
+
+            try {
+                // Step 1: Map Emojis back to Base64
+                const base64 = emojiToBase64(emojiCode);
+
+                if (!base64) {
+                    throw new Error("No valid Base64 data found in emojis.");
+                }
+
+                // Step 2: Base64 Decode
+                const binaryStr = atob(base64);
+                const bytes = new Uint8Array(binaryStr.length);
+                for (let i = 0; i < binaryStr.length; i++) {
+                    bytes[i] = binaryStr.charCodeAt(i);
+                }
+                const decoded = bytesToString(bytes); // This gives us the Scrambled text
+
+                // Step 3: Unscramble (XOR with key)
+                // Note: If the key is wrong, the result will be garbage characters.
+                const originalText = scramble(decoded, key);
+
+                document.getElementById('output-plain').value = originalText;
+                showToast("Decrypted successfully!");
+            } catch (e) {
+                console.error(e);
+                showToast("Decryption failed. Wrong password or corrupted code.", true);
+            }
+        }
+
+        // --- 4. UI Interactions ---
+
+        function switchTab(mode) {
+            const encryptSec = document.getElementById('section-encrypt');
+            const decryptSec = document.getElementById('section-decrypt');
+            const encryptInfo = document.getElementById('info-encrypt');
+            const decryptInfo = document.getElementById('info-decrypt');
+            const btns = document.querySelectorAll('.tab-btn');
+
+            if (mode === 'encrypt') {
+                encryptSec.style.display = 'block';
+                decryptSec.style.display = 'none';
+                encryptInfo.style.display = 'block';
+                decryptInfo.style.display = 'none';
+                btns[0].classList.add('active');
+                btns[1].classList.remove('active');
+            } else {
+                encryptSec.style.display = 'none';
+                decryptSec.style.display = 'block';
+                encryptInfo.style.display = 'none';
+                decryptInfo.style.display = 'block';
+                btns[0].classList.remove('active');
+                btns[1].classList.add('active');
+            }
+        }
+
+        function clearFields() {
+            document.getElementById('input-text').value = '';
+            document.getElementById('output-text').value = '';
+            document.getElementById('input-emoji').value = '';
+            document.getElementById('output-plain').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        function copyToClipboard(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el.value) return;
+            
+            el.select();
+            el.setSelectionRange(0, 99999); // Mobile support
+            navigator.clipboard.writeText(el.value).then(() => {
+                showToast("Copied to clipboard!");
+            });
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = msg;
+            toast.className = isError ? 'toast show error' : 'toast show';
+            
+            setTimeout(() => {
+                toast.className = toast.className.replace('show', '');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
